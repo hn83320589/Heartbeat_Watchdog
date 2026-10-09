@@ -1,0 +1,81 @@
+# 可在 VS Code (REST Client) / Rider / Visual Studio 直接執行的範例請求。
+@baseUrl = http://localhost:5080
+@apiKey = dev-api-key-change-me-1234
+
+### 列出監控項目
+GET {{baseUrl}}/api/monitors
+X-Api-Key: {{apiKey}}
+
+### 建立：柏林每日 02:30 備份
+POST {{baseUrl}}/api/monitors
+X-Api-Key: {{apiKey}}
+Content-Type: application/json
+
+{
+  "name": "Offsite backup (Berlin)",
+  "slug": "berlin-backup",
+  "scheduleType": "Cron",
+  "cronExpression": "30 2 * * *",
+  "graceMinutes": 45,
+  "timeZone": "Europe/Berlin"
+}
+
+### 建立：非法輸入 → 400（三個欄位的錯誤會一起回報）
+POST {{baseUrl}}/api/monitors
+X-Api-Key: {{apiKey}}
+Content-Type: application/json
+
+{
+  "name": "Broken",
+  "slug": "broken",
+  "scheduleType": "Cron",
+  "cronExpression": "61 25 * * *",
+  "graceMinutes": -1,
+  "timeZone": "Mars/Olympus"
+}
+
+### 更新
+PUT {{baseUrl}}/api/monitors/1
+X-Api-Key: {{apiKey}}
+Content-Type: application/json
+
+{
+  "name": "Offsite backup (Berlin)",
+  "slug": "berlin-backup",
+  "scheduleType": "Cron",
+  "cronExpression": "30 2 * * *",
+  "graceMinutes": 60,
+  "timeZone": "Europe/Berlin"
+}
+
+### 暫停 / 恢復
+POST {{baseUrl}}/api/monitors/1/pause
+X-Api-Key: {{apiKey}}
+
+###
+POST {{baseUrl}}/api/monitors/1/resume
+X-Api-Key: {{apiKey}}
+
+### 事件歷史（分頁）
+GET {{baseUrl}}/api/monitors/1/events?page=1&pageSize=20
+X-Api-Key: {{apiKey}}
+
+### 通知與派送嘗試紀錄
+GET {{baseUrl}}/api/monitors/1/notifications
+X-Api-Key: {{apiKey}}
+
+### 近 30 天可用率
+GET {{baseUrl}}/api/monitors/1/availability?days=30
+X-Api-Key: {{apiKey}}
+
+### Ping（把 TOKEN 換成建立時回傳的 pingToken）
+POST {{baseUrl}}/ping/TOKEN/start
+
+###
+POST {{baseUrl}}/ping/TOKEN
+
+###
+POST {{baseUrl}}/ping/TOKEN/fail
+
+### 自我健康檢查
+GET {{baseUrl}}/health
