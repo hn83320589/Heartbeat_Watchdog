@@ -51,6 +51,17 @@ public class MonitorScheduleTests
     }
 
     [Fact]
+    public void Cron_BerlinDaily0230_OnFallBackDay_FiresOnlyOnce()
+    {
+        // 2026-10-25 柏林 03:00 CEST 退回 02:00 CET，當地 02:30 出現兩次（00:30 UTC 與 01:30 UTC）。
+        // 只應在第一次觸發；之後的下一次是隔天，而不是同一天的 01:30 UTC。
+        var schedule = MonitorSchedule.Cron("30 2 * * *", "Europe/Berlin");
+
+        Assert.Equal(Utc(2026, 10, 25, 0, 30), schedule.NextAfter(Utc(2026, 10, 24, 12, 0)));
+        Assert.Equal(Utc(2026, 10, 26, 1, 30), schedule.NextAfter(Utc(2026, 10, 25, 0, 30)));
+    }
+
+    [Fact]
     public void Cron_ImpossibleDate_ReturnsNull()
     {
         var schedule = MonitorSchedule.Cron("0 0 30 2 *", "UTC");
