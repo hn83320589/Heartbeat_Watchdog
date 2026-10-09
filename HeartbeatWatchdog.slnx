@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/samples/">
+    <Project Path="samples/FakeWebhookReceiver/FakeWebhookReceiver.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/HeartbeatWatchdog.Api/HeartbeatWatchdog.Api.csproj" />
+    <Project Path="src/HeartbeatWatchdog.Core/HeartbeatWatchdog.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/HeartbeatWatchdog.Tests/HeartbeatWatchdog.Tests.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,6 @@
+@HeartbeatWatchdog.Api_HostAddress = http://localhost:5067
+
+GET {{HeartbeatWatchdog.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
