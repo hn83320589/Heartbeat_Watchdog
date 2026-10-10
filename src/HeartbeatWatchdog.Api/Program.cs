@@ -57,19 +57,16 @@ builder.Services.AddSwaggerGen(swagger =>
     {
         Title = "Heartbeat Watchdog API",
         Version = "v1",
-        Description = "排程任務心跳監控。管理 API（/api/*）需要 X-Api-Key header；/ping/* 只靠 token。",
+        Description = "排程任務心跳監控。管理 API（`/api/*`）需要 `X-Api-Key` header；`/ping/*` 只靠 token，不需要 API key。",
     });
-    swagger.AddSecurityDefinition("ApiKey", new OpenApiSecurityScheme
+    swagger.AddSecurityDefinition(ApiKeyOperationFilter.SchemeId, new OpenApiSecurityScheme
     {
         Type = SecuritySchemeType.ApiKey,
         In = ParameterLocation.Header,
         Name = RequireApiKeyAttribute.HeaderName,
         Description = "管理 API 金鑰",
     });
-    swagger.AddSecurityRequirement(document => new OpenApiSecurityRequirement
-    {
-        [new OpenApiSecuritySchemeReference("ApiKey", document)] = [],
-    });
+    swagger.OperationFilter<ApiKeyOperationFilter>();
     swagger.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, "HeartbeatWatchdog.Api.xml"));
 });
 
