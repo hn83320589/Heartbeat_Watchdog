@@ -6,6 +6,7 @@
 - cron 解析使用 [Cronos](https://github.com/HangfireIO/Cronos)，依監控項目的 IANA 時區解讀
 - 所有時間邏輯透過 `TimeProvider` 注入；測試用 `FakeTimeProvider` 快轉，不等待真實時間
 - Swagger UI：<http://localhost:5080/swagger>
+- 測試：**71 個自動化測試全數通過**，手寫程式碼行覆蓋率 91.6%，11 項端對端驗收情境皆符合預期，詳見 **[測試報告](docs/TEST_REPORT.md)**
 
 ---
 
@@ -39,7 +40,7 @@ curl http://localhost:5080/ping/<demo-quick 的 token>          # demo-quick 變
 
 curl http://localhost:5080/ping/<ny-weekday-report 的 token>/fail
 # ny-weekday-report 的 webhook 指向 /webhook/fail（固定回 500）
-# → 可看到 3 次嘗試（約 0s / +5s / +15s）後標記為 Failed：
+# → 可看到 3 次嘗試（約 0s / +5s / +15s；派送 worker 每 2 秒檢查一次，實際會晚 1~2 秒）後標記為 Failed：
 curl -s -H "$KEY" http://localhost:5080/api/monitors/3/notifications
 ```
 
@@ -58,6 +59,64 @@ curl -s -H "$KEY" http://localhost:5080/api/monitors/3/notifications
 ```bash
 dotnet test
 ```
+
+目前共 71 個測試（單元測試 43、整合測試 28），全部以 `FakeTimeProvider` 控制時間，不需要等待真實時間，約 3 秒跑完。測試範圍、覆蓋率與端對端驗收結果見 [docs/TEST_REPORT.md](docs/TEST_REPORT.md)。
+
+---
+
+## 截圖
+
+以下截圖都是實際執行的畫面，完整的測試步驟與說明見[測試報告](docs/TEST_REPORT.md)。
+
+### Swagger UI
+
+管理 API 有鎖頭圖示（需要 `X-Api-Key`），`/ping/*` 只靠 token。
+
+![Swagger 總覽](docs/images/01-swagger-overview.png)
+
+### 輸入驗證：非法 cron、時區、grace → 400
+
+所有欄位的錯誤會一次回報，每則訊息都指出哪個值、為什麼不合法。
+
+![Swagger 驗證錯誤](docs/images/02-swagger-validation-400.png)
+
+### 存取控制：401 / 404
+
+![驗證與存取控制](docs/images/03-validation-auth.png)
+
+### ping、執行時長與柏林時區
+
+先 `/start`、3 秒後成功 ping，事件記錄 `durationMs: 3016`。柏林 `30 2 * * *` 的下一次預期時間是 `00:30Z`，也就是當地 `02:30+02:00`。
+
+![ping 與執行時長](docs/images/04-ping-duration-berlin.png)
+
+### fail ping 與 Webhook 重試
+
+Webhook 目標回 500：共 3 次嘗試，以指數退避重送，每次嘗試都寫入紀錄，最終標記為 `Failed`。
+
+![fail ping 與重試](docs/images/05-fail-and-retries.png)
+
+### 暫停/恢復與背景檢查服務
+
+恢復時預期時間從恢復當下重新計算。背景 worker 每 30 秒評估一次，讓沒有回報的項目自動走過 Up → Late → Down。
+
+![暫停恢復與背景檢查](docs/images/06-pause-resume-worker.png)
+
+### Webhook 接收端與健康檢查
+
+demo-quick 在 Down 之後雖然又跑了多個 tick，接收端仍只收到 1 次通知。
+
+![Webhook 接收端](docs/images/07-webhook-receiver-health.png)
+
+### 服務日誌
+
+單行、UTC 時間戳。狀態轉換寫 `info`，Webhook 重試寫 `warn`，最終失敗寫 `fail`。
+
+![服務日誌](docs/images/09-api-log.png)
+
+### 測試結果
+
+![dotnet test](docs/images/08-dotnet-test.png)
 
 ---
 
@@ -342,6 +401,9 @@ samples/
 scripts/
   seed.sh                        建立 5 個範例監控項目
   watchdog.http                  所有 API 的範例請求
+docs/
+  TEST_REPORT.md                 測試報告（結果、覆蓋率、端對端驗收）
+  images/                        截圖
 tests/
   HeartbeatWatchdog.Tests/
     Core/                        狀態機、排程、驗證、可用率的單元測試
@@ -376,6 +438,11 @@ dotnet ef migrations add <Name> -o Data/Migrations
 | 時間邏輯皆注入、測試不 sleep | 全部測試使用 `FakeTimeProvider`；專案中沒有 `Thread.Sleep` / `Task.Delay` |
 | 3 種以上排程與時區的範例 | `scripts/seed.sh`（Asia/Taipei cron、Europe/Berlin cron、America/New_York cron、UTC interval、Asia/Taipei interval） |
 | 柏林 02:30 夏令時間 | `MonitorScheduleTests.Cron_Berlin*` |
+| BackgroundService 每 30 秒評估、tick 失敗不中斷 | `PeriodicWorkerTests` |
+| 服務自身監控（worker 卡住時 /health 回 503） | `WorkerHeartbeatsTests` |
+| Swagger 正確標示哪些端點需要 API key | `OpenApiDocumentTests` |
+
+各項的端對端驗證結果與截圖見[測試報告 §5–6](docs/TEST_REPORT.md#5-驗收標準對照)。
 
 ## 範圍外
 
